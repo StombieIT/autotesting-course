@@ -1,25 +1,26 @@
-import org.ficko.models.CredentialProviders;
-import org.ficko.models.ICredentialsProvider;
+import org.ficko.models.TestBot;
 import org.ficko.pages.AuthorizationPage;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static com.codeborne.selenide.Selenide.open;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class AuthorizationTest {
-    private static ICredentialsProvider CREDENTIALS_PROVIDER;
+    private static final TestBot TEST_BOT = new TestBot("botS23AT26", "autotests2023");
+    private static final String BASE_URL = "https://ok.ru";
 
-    @BeforeAll
-    public static void setUp() {
-        CREDENTIALS_PROVIDER = CredentialProviders.bot();
+    @BeforeEach
+    public void setUp() {
+        open(BASE_URL);
     }
 
     @Test
     public void signInWithBotCredentials() {
-        final String username = new AuthorizationPage()
-                .signInWith(CREDENTIALS_PROVIDER)
+        String username = new AuthorizationPage()
+                .signInWith(TEST_BOT)
                 .profileUsername();
-        final String credentialsLogin = CREDENTIALS_PROVIDER.getLogin();
-        assertEquals(username, credentialsLogin + " " + credentialsLogin);
+        String credentialsLogin = TEST_BOT.getLogin();
+        assertEquals(username, credentialsLogin + " " + credentialsLogin, "Не совпадают регистрационные данные");
     }
 }

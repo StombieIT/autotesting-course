@@ -2,6 +2,7 @@ package org.ficko.pages;
 
 import com.codeborne.selenide.Condition;
 import com.codeborne.selenide.SelenideElement;
+import org.ficko.base.LoadablePage;
 import org.ficko.models.Track;
 import org.openqa.selenium.By;
 
@@ -9,9 +10,11 @@ import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.codeborne.selenide.Condition.attribute;
+import static com.codeborne.selenide.Condition.visible;
 import static com.codeborne.selenide.Selenide.*;
 
-public class MusicPage extends Page {
+public class MusicPage extends LoadablePage {
     private static final By PLAYER_CONTROLS = By.cssSelector("wm-player-controls");
     private static final By TRACK = By.cssSelector("wm-track");
     private static final By TRACKS_LIST = By.cssSelector("wm-tracks-list");
@@ -29,7 +32,7 @@ public class MusicPage extends Page {
     private static final By CREATE_PLAYLIST_FIELD = By.xpath(".//input[contains(@data-tsid, 'input_name_playlist')]");
 
     public MusicPage navigateToMyTracksLazy() {
-        final SelenideElement myTracksTab = $(MY_TRACKS_TAB).shouldBe(Condition.visible.because("Не найдена вкладка моих треков"));
+        final SelenideElement myTracksTab = $(MY_TRACKS_TAB).shouldBe(visible.because("Не найдена вкладка моих треков"));
 
         if (!myTracksTab.has(Condition.cssClass("__active"))) {
             myTracksTab.click();
@@ -38,90 +41,66 @@ public class MusicPage extends Page {
     }
 
     public MusicPage navigateToMyTracks() {
-        $(MY_TRACKS_TAB).shouldBe(
-                Condition.visible.because("Не найдена вкладка моих треков")
-        ).click();
+        $(MY_TRACKS_TAB).shouldBe(visible.because("Не найдена вкладка моих треков")).click();
         return this;
     }
 
     public MusicPage navigateToPopular() {
-        $(POPULAR_TAB).shouldBe(
-                Condition.visible.because("Не найдена вкладка популярных треков`")
-        ).click();
+        $(POPULAR_TAB).shouldBe(visible.because("Не найдена вкладка популярных треков`")).click();
         return this;
     }
 
     public String addFirstPopularTrack() {
-        final SelenideElement firstTrack = $(TRACK).should(Condition.visible.because("Не найден первый популярный трек"));
+        final SelenideElement firstTrack = $(TRACK).should(visible.because("Не найден первый популярный трек"));
         firstTrack.hover()
                 .$(TRACK_ADD_BUTTON)
-                .should(Condition.visible.because("Не найдена кнопка добавления трека"))
+                .shouldBe(visible.because("Не найдена кнопка добавления трека"))
                 .click();
         return firstTrack.$(TRACK_TITLE)
-                .should(Condition.visible.because("Не найден заголовок трека"))
+                .shouldHave(attribute("href").because("Не найден заголовок трека"))
                 .getAttribute("href");
     }
 
     public MusicPage navigateToPlaylistWithName(String playlistName) {
         $(PLAYLISTS_NAVIGATION_BAR)
             .$(By.xpath(".//*[contains(@class, 'text') and contains(text(), '" + playlistName + "')]"))
+            .shouldBe(visible.because("Не найден навигационная панель плейлистов"))
             .click();
         return this;
     }
 
     public List<Track> tracks()  {
-        waitFor(TRACKS_LIST, "Не найден список треков на странице");
-        return $(TRACKS_LIST)
-                .findAll(TRACK_TITLE)
-                .stream()
+        return $(TRACKS_LIST).shouldBe(visible.because("Не найден список треков на странице")).$$(TRACK_TITLE).stream()
                 .map(element -> new Track(element.getAttribute("href"), element.text()))
                 .collect(Collectors.toList());
     }
 
+    public List<String> tracksLinks()  {
+        return tracks().stream()
+                .map(Track::getLink)
+                .collect(Collectors.toList());
+    }
+
     public List<String> myPlaylists() {
-        return $(PLAYLISTS_NAVIGATION_BAR)
-                .shouldBe(Condition.visible.because("Не найдена навигационная панель"))
-                .findAll(TEXT_CONTAINER)
-                .stream()
+        return $(PLAYLISTS_NAVIGATION_BAR).shouldBe(visible.because("Не найдена навигационная панель")).$$(TEXT_CONTAINER).stream()
                 .map(SelenideElement::text)
                 .collect(Collectors.toList());
     }
 
 
     public Track createPlaylistForFirstTrack(String playlistName) {
-        final SelenideElement track = $(TRACKS_LIST)
-                .shouldBe(Condition.visible.because("Не найден список треков"))
-                .$(TRACK)
-                .shouldBe(Condition.visible.because("Не найден трек"));
+        SelenideElement track = $(TRACKS_LIST).shouldBe(visible.because("Не найден список треков")).$(TRACK).shouldBe(visible.because("Не найден трек"));
 
-        final SelenideElement trackTitle = track.$(TRACK_TITLE).shouldBe(Condition.visible.because("Не найден заголовок трека"));
+        SelenideElement trackTitle = track.$(TRACK_TITLE).shouldBe(visible.because("Не найден заголовок трека"));
 
-        Track trackModel = new Track(trackTitle.getAttribute("href"), trackTitle.text());
+        Track trackModel = new Track(trackTitle.shouldHave(attribute("href").because("Не найдена ссылка на трек")).getAttribute("href"), trackTitle.text());
 
-        final SelenideElement trackActions  = track.hover()
-                .$(TRACK_ACTIONS)
-                .should(Condition.visible.because("Не найдена кнопка действий трека"), Duration.ofSeconds(DEFAULT_WAITING_TIME))
-                .hover();
+        SelenideElement trackActions  = track.hover().$(TRACK_ACTIONS).shouldBe(visible.because("Не найдена кнопка действий трека")).hover();
 
-        trackActions
-                .$(TRACK_COLLECTIONS_ACTIONS)
-                .should(Condition.visible.because("Не найдено меню действий для трека"), Duration.ofSeconds(DEFAULT_WAITING_TIME))
-                .click();
-
-        trackActions
-                .$(CREATE_PLAYLIST)
-                .shouldBe(Condition.visible.because("Не найдена кнопка создания плейлиста"))
-                .click();
-
-        trackActions
-                .$(CREATE_PLAYLIST_FIELD)
-                .should(Condition.visible.because("Не найдено поле для создания создания плейлиста"), Duration.ofSeconds(DEFAULT_WAITING_TIME))
-                .val(playlistName);
-
-        trackActions
-                .$(CREATE_PLAYLIST_BUTTON)
-                .should(Condition.visible.because("Не найдена кнопка для подтверждения создания плейлиста"), Duration.ofSeconds(DEFAULT_WAITING_TIME))
-                .click();
+        trackActions.$(TRACK_COLLECTIONS_ACTIONS).shouldBe(visible.because("Не найдено меню действий для трека")).click();
+        trackActions.$(CREATE_PLAYLIST).shouldBe(visible.because("Не найдена кнопка создания плейлиста")).click();
+        trackActions.$(CREATE_PLAYLIST_FIELD).shouldBe(visible.because("Не найдено поле для создания создания плейлиста")).sendKeys(playlistName);
+        trackActions.$(CREATE_PLAYLIST_BUTTON).shouldBe(visible.because("Не найдена кнопка для подтверждения создания плейлиста")).click();
 
         return trackModel;
     }
@@ -129,13 +108,13 @@ public class MusicPage extends Page {
     public int myTracksCounter() {
         return Integer.parseInt(
                 $(MY_TRACKS_COUNTER)
-                        .shouldBe(Condition.visible.because("Не найден счётчик добавленных треков"))
+                        .shouldBe(visible.because("Не найден счётчик добавленных треков"))
                         .text()
         );
     }
 
     @Override
     protected void isLoaded() throws Error {
-        waitFor(PLAYER_CONTROLS, "Плеер не загрузился");
+        $(PLAYER_CONTROLS).shouldBe(visible.because("Плеер не загрузился"));
     }
 }
